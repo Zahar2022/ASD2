@@ -3,7 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <random>
-#include <fstream>
+#include <fstream>у
 #include <string>
 #include <chrono>
 
@@ -56,17 +56,17 @@ bool isFileContainsSortedArray(const std::string& fileName) {
 };
 
 
-void Splitting(const std::string& fileName1, const std::string& fileName2, const std::string& fileName3, const std::string& fileName4) {
+void Splitting(const std::string& fileName1, const std::string& fileName3, const std::string& fileName4) {
     std::ofstream F[2] = { std::ofstream(fileName3), std::ofstream(fileName4) };
     std::ifstream A(fileName1);
     if (!A.is_open()) {
         std::cout << "Couldn't open the file for reading" << std::endl;
     }
+
     int n = 0, p = 1, x;
-    while (!A.eof()) {
+    while (A >> x && !A.eof()) {
         int i = 0;
         while (!A.eof() && i < p) {
-            A >> x;
             F[n] << x;
             i++;
         }
@@ -77,44 +77,45 @@ void Splitting(const std::string& fileName1, const std::string& fileName2, const
     F[1].close();
 }
 
-void Merging(const std::string& fileName1, const std::string& fileName2, const std::string& fileName3, const std::string& fileName4){
+
+void Merging(int p, const std::string& fileName1, const std::string& fileName2, const std::string& fileName3, const std::string& fileName4) {
     int x[2];
     std::ifstream S[2] = { std::ifstream(fileName3), std::ifstream(fileName4) };
     std::ofstream F[2] = { std::ofstream(fileName1), std::ofstream(fileName2) };
-    int i, j, n = 0, p = 1;
+    int i, j, n = 0;
     while (!S[0].eof() && !S[1].eof()) {
         i = 0, j = 0;
-        while (!S[0] && !S[1].eof() && i < p && j < p) {
+        while (!S[0].eof() && !S[1].eof() && i < p && j < p) {
             if (x[0] < x[1]) {
-                S[0] >> x[0];
                 F[n] << x[0] << " ";
+                S[0] >> x[0];
                 i++;
             }
             else {
-                S[1] >> x[1];
                 F[n] << x[1] << " ";
+                S[1] >> x[1];
                 j++;
             }
             while (!S[0].eof() && i < p) {
-                S[0] >> x[0];
                 F[n] << x[0] << " ";
+                S[0] >> x[0];
                 i++;
             }
             while (!S[1].eof() && j < p) {
-                S[1] >> x[1];
                 F[n] << x[1] << " ";
+                S[1] >> x[1];
                 j++;
             }
             n = 1 - n;
         }
     }
     while (!S[0].eof()) {
-        S[0] >> x[0];
         F[n] << x[0] << " ";
+        S[0] >> x[0];
     }
     while (!S[1].eof()) {
-        S[1] >> x[1];
         F[n] << x[1] << " ";
+        S[1] >> x[1];
     }
 
     S[0].close();
@@ -123,20 +124,80 @@ void Merging(const std::string& fileName1, const std::string& fileName2, const s
     F[1].close();
 }
 
-void sortFile(std::string& fileName) {
-    
+
+void DirectMergingSort(const std::string& inputFile) {
+    int p = 1;
+    std::string F[2] = { "F0.txt", "F1.txt" };
+    std::string S[2] = { "S0.txt", "S1.txt" };
+
+    std::ifstream input(inputFile);
+    if (!input.is_open()) {
+        std::cout << "Couldn't open the file for reading" << std::endl;
+    }
+
+    std::ofstream F0(F[0]);
+    std::ofstream F1(F[1]);
+    if (!F0.is_open() || !F1.is_open()) {
+        std::cout << "Couldn't open the files for writing" << std::endl;
+    }
+
+    Splitting(inputFile, F[0], F[1]);
+
+    input.close();
+    F0.close();
+    F1.close();
+
+    if (!F1.eof()) {
+        while (true) {
+            std::ifstream checkFile(F[1]);
+            if (!checkFile.is_open() || checkFile.peek() == std::ifstream::traits_type::eof()) {
+                break;
+            }
+            checkFile.close();
+
+            std::ifstream F0Read(F[0]);
+            std::ifstream F1Read(F[1]);
+
+            std::ofstream S0(S[0]);
+            std::ofstream S1(S[1]);
+
+            Merging(p, S[0], S[1], F[0], F[1]);
+
+            F0Read.close();
+            F1Read.close();
+            S0.close();
+            S1.close();
+
+            p *= 2;
+
+            std::ifstream S0Reading(S[0]);
+            std::ifstream S1Reading(S[1]);
+
+            std::ofstream F0Writing(F[0]);
+            std::ofstream F1Writing(F[1]);
+
+            Merging(p, F[0], F[1], S[0], S[1]);
+
+            S0Reading.close();
+            S1Reading.close();
+            F0Writing.close();
+            F1Writing.close();
 
 
+            p *= 2;
+        }
+    }
 }
 
 
-int createAndSortFile(const std::string& fileName, const int numbersCount, const int maxNumberValue)
+
+int createAndSortFile(const std::string& fileName,  const int numbersCount, const int maxNumberValue)
 {
     if (!createFileWithRandomNumbers(fileName, numbersCount, maxNumberValue)) {
         return -1;
     }
 
-    //sortFile(fileName); //Вызов вашей функции сортировки
+    DirectMergingSort(fileName);
 
     if (!isFileContainsSortedArray(fileName)) {
         return -2;
@@ -148,8 +209,8 @@ int createAndSortFile(const std::string& fileName, const int numbersCount, const
 int main()
 {
     std::string fileName = "file.txt";
-    const int numbersCount = 1000000;
-    const int maxNumberValue = 100000;
+    const int numbersCount = 20;
+    const int maxNumberValue = 100;
 
     for (int i = 0; i < 10; i++) {
         switch (createAndSortFile(fileName, numbersCount, maxNumberValue)) {
@@ -169,7 +230,6 @@ int main()
 
     return 0;
 }
-
 // Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
 // Отладка программы: F5 или меню "Отладка" > "Запустить отладку"
 
